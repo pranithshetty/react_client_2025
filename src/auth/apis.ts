@@ -1,4 +1,5 @@
-const BASE_URL = import.meta.env.VITE_SERVER_BASE_URL ?? 'http://localhost:8000';
+const BASE_URL =
+  import.meta.env.VITE_SERVER_BASE_URL ?? 'http://localhost:8000';
 
 export async function refreshToken() {
   const res = await fetch(`${BASE_URL}/refresh-token`, {
@@ -11,7 +12,10 @@ export async function refreshToken() {
 export async function login(data: object) {
   const res = await fetch(`${BASE_URL}/user/login`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': navigator.userAgent,
+    },
     credentials: 'include',
     body: JSON.stringify(data),
   });
@@ -38,7 +42,10 @@ export async function logout() {
 export async function googleLogin(idToken: string) {
   const res = await fetch(`${BASE_URL}/user/google-login`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': navigator.userAgent,
+    },
     credentials: 'include',
     body: JSON.stringify({ idToken }),
   });
