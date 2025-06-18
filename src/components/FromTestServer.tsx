@@ -31,25 +31,25 @@ type Geo = {
     company: Company;
   };
 
-const FromTestServer = () => {
+const FromTestServer = ({token}:{token: string} ) => {
 
     const [users, setUsers] =  useState<User[]>([])
 
 
     async function getDataFromTestServer(): Promise<void> {
-        const stored = localStorage.getItem('token');
-        if (!stored) {
+        //const stored = localStorage.getItem('token');
+        if (!token) {
           console.error('Token not found');
           return;
         }
       
-        const parsed = JSON.parse(stored);
-        const jwt = parsed.token;
+        // const parsed = JSON.parse(token);
+        // const jwt = parsed.token;
       
         try {
           const resp = await fetch('http://localhost:8000/all-users', {
             headers: {
-              'Authorization': `Bearer ${jwt}`,
+              'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json',
             },
           });

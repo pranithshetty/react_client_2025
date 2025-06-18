@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
+import FromTestServer from './FromTestServer';
 
 type AuthMode = 'login' | 'register';
+const BASE_URL = import.meta.env.VITE_SERVER_BASE_URL ?? 'http://localhost:8000';
 
 interface FormData {
   email: string;
@@ -29,15 +31,25 @@ const AuthForm: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem('token');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (parsed.token && isValidJWT(parsed.token)) {
-        setToken(parsed.token);
-        setMessage('Already logged in.');
+    const tryRefresh = async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/refresh-token`, {
+          method: 'POST',
+          credentials: 'include',
+        });
+        const data = await res.json();
+        if (res.ok && data.accessToken && isValidJWT(data.accessToken)) {
+          setToken(data.accessToken);
+          setMessage('Session restored.');
+        }
+      } catch (err) {
+        console.error('Refresh token failed');
+      } finally {
+        setIsLoading(false);
       }
-    }
-    setIsLoading(false);
+    };
+  
+    tryRefresh();
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -52,8 +64,8 @@ const AuthForm: React.FC = () => {
 
     const url =
       mode === 'login'
-        ? 'http://localhost:8000/user/login'
-        : 'http://localhost:8000/user/signup';
+        ? `${BASE_URL}/user/login`
+        : `${BASE_URL}/user/signup`;
 
     try {
       const response = await fetch(url, {
@@ -61,6 +73,7 @@ const AuthForm: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(formData),
       });
 
@@ -71,9 +84,8 @@ const AuthForm: React.FC = () => {
       }
 
       if (mode === 'login') {
-        if (!data.token) throw new Error('No token received');
-        localStorage.setItem('token', JSON.stringify(data));
-        setToken(data.token);
+        if (!data.accessToken) throw new Error('No token received');
+        setToken(data.accessToken);
         setMessage('Login successful');
       } else {
         setMessage('Registration successful! You can now log in.');
@@ -90,11 +102,19 @@ const AuthForm: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
+  const handleLogout = async () => {
+    try {
+      await fetch(`${BASE_URL}/user/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
     setToken(null);
     setMessage('Logged out.');
   };
+
   if (isLoading) {
     return <p>Loading...</p>;
   }
@@ -103,6 +123,7 @@ const AuthForm: React.FC = () => {
     <div style={{ maxWidth: 400, margin: 'auto' }}>
       {token ? (
         <>
+        <FromTestServer token ={token}/>
           <h2>Welcome user!</h2>
           {/* <p>JWT: {token}</p> */}
           <button onClick={handleLogout}>Logout</button>
@@ -148,12 +169,13 @@ const AuthForm: React.FC = () => {
 
               try {
                 const res = await fetch(
-                  'http://localhost:8000/user/google-login',
+                  `${BASE_URL}/user/google-login`,
                   {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
                     },
+                    credentials: 'include',
                     body: JSON.stringify({ idToken }),
                   }
                 );
@@ -162,8 +184,8 @@ const AuthForm: React.FC = () => {
                 if (!res.ok)
                   throw new Error(data.error || 'Google login failed');
 
-                localStorage.setItem('token', JSON.stringify(data));
-                setToken(data.token);
+                //localStorage.setItem('token', JSON.stringify(data));
+                setToken(data.accessToken);
                 setMessage('Google Login Successful');
               } catch (err) {
                 console.error(err);
